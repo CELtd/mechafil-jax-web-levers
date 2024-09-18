@@ -56,7 +56,6 @@ def get_offline_data(start_date, current_date, end_date):
 
     return offline_data, smoothed_last_historical_rbp, smoothed_last_historical_rr, smoothed_last_historical_fpr
 
-
 def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
     # convert results dictionary into a dataframe so that we can use altair to make nice plots
     status_quo_results = scenario_results['status-quo']
@@ -81,8 +80,10 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
     cs_dff['date'] = pd.to_datetime(du.get_t(start_date, end_date=end_date))
 
     locked_dff = pd.DataFrame()
-    locked_dff['StatusQuo'] = status_quo_results['network_locked'] / 1e6
-    locked_dff['Configured'] = configured_results['network_locked'] / 1e6
+    locked_dff['StatusQuo'] = (status_quo_results['network_locked'] / 1e6)
+    locked_dff['Configured'] = (configured_results['network_locked'] / 1e6)
+    locked_dff['StatusQuo'] = locked_dff['StatusQuo'].rolling(window=180, min_periods=1).mean()
+    locked_dff['Configured'] = locked_dff['Configured'].rolling(window=180, min_periods=1).mean()
     locked_dff['date'] = pd.to_datetime(du.get_t(start_date, end_date=end_date))
 
     pledge_dff = pd.DataFrame()
