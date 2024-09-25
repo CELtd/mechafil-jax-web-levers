@@ -61,7 +61,7 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
     status_quo_results = scenario_results['status-quo']
     configured_results = scenario_results['configured']
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     power_dff = pd.DataFrame()
     power_dff['RBP'] = status_quo_results['rb_total_power_eib']
@@ -78,6 +78,18 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
     cs_dff['StatusQuo'] = status_quo_results['circ_supply'] / 1e6
     cs_dff['Configured'] = configured_results['circ_supply'] / 1e6
     cs_dff['date'] = pd.to_datetime(du.get_t(start_date, end_date=end_date))
+
+    cs_delta_dff = pd.DataFrame()
+    cs_sq = np.diff(np.asarray(status_quo_results['circ_supply']) / 1e6)
+    cs_conf = np.diff(np.asarray(configured_results['circ_supply']) / 1e6)
+    cs_delta_dff['StatusQuo'] = cs_sq[1:]
+    cs_delta_dff['Configured'] = cs_conf[1:]
+    cs_delta_dff['date'] = pd.to_datetime(du.get_t(start_date+timedelta(days=2), end_date=end_date))
+
+    as_dff = pd.DataFrame()
+    as_dff['StatusQuo'] = status_quo_results['available_supply'] / 1e6
+    as_dff['Configured'] = configured_results['available_supply'] / 1e6
+    as_dff['date'] = pd.to_datetime(du.get_t(start_date, end_date=end_date))
 
     locked_dff = pd.DataFrame()
     locked_dff['StatusQuo'] = (status_quo_results['network_locked'] / 1e6)
@@ -240,6 +252,46 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         #     .configure_title(fontSize=14, anchor='middle')
         # )
         # st.altair_chart(dnr.interactive(), use_container_width=True)
+
+    with col4:
+        csd_df = pd.melt(cs_delta_dff, id_vars=["date"],
+                             value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
+                             var_name='Scenario', value_name='cs')
+        csd = (
+            alt.Chart(csd_df)
+            .mark_line()
+            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+                    y=alt.Y("cs", title='M-FIL'), color=alt.Color('Scenario', legend=None))
+            .properties(title="Circ Supply - Delta")
+            .configure_title(fontSize=14, anchor='middle')
+        )
+        st.altair_chart(csd.interactive(), use_container_width=True)
+        
+        as_df = pd.melt(as_dff, id_vars=["date"],
+                             value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
+                             var_name='Scenario', value_name='cs')
+        aas = (
+            alt.Chart(as_df)
+            .mark_line()
+            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+                    y=alt.Y("cs", title='M-FIL'), color=alt.Color('Scenario', legend=None))
+            .properties(title="Available Supply")
+            .configure_title(fontSize=14, anchor='middle')
+        )
+        st.altair_chart(aas.interactive(), use_container_width=True)
+
+        locked_df = pd.melt(locked_dff, id_vars=["date"],
+                             value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
+                             var_name='Scenario', value_name='cs')
+        locked = (
+            alt.Chart(locked_df)
+            .mark_line()
+            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+                    y=alt.Y("cs", title='M-FIL'), color=alt.Color('Scenario', legend=None))
+            .properties(title="Network Locked")
+            .configure_title(fontSize=14, anchor='middle')
+        )
+        st.altair_chart(locked.interactive(), use_container_width=True)
 
 
 def add_costs(results_dict, cost_scaling_constant=0.1, filp_scaling_cost_pct=0.5):
