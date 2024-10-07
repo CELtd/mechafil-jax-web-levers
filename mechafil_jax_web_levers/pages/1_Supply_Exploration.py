@@ -16,6 +16,8 @@ import streamlit.components.v1 as components
 import st_debug as d
 import altair as alt
 
+# import pystarboard.data as psb
+
 import mechafil_jax.data as data
 import mechafil_jax.sim as sim
 import mechafil_jax.constants as C
@@ -54,6 +56,10 @@ def get_offline_data(start_date, current_date, end_date):
     smoothed_last_historical_rr = float(np.median(hist_rr[-30:]))
     smoothed_last_historical_fpr = float(np.median(hist_fpr[-30:]))
 
+    # psb.setup_spacescope(PUBLIC_AUTH_TOKEN)
+    # hist_df = psb.get_historical_network_stats(start_date-timedelta(days=180), current_date, current_date)
+    # print(hist_df)
+
     return offline_data, smoothed_last_historical_rbp, smoothed_last_historical_rr, smoothed_last_historical_fpr
 
 def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
@@ -90,6 +96,7 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
     as_dff['StatusQuo'] = status_quo_results['available_supply'] / 1e6
     as_dff['Configured'] = configured_results['available_supply'] / 1e6
     as_dff['date'] = pd.to_datetime(du.get_t(start_date, end_date=end_date))
+    as_dff = as_dff[1:]
 
     locked_dff = pd.DataFrame()
     locked_dff['StatusQuo'] = (status_quo_results['network_locked'] / 1e6)
@@ -123,6 +130,10 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
     dnr_dff['Configured'] = configured_results['day_network_reward'] * 100
     dnr_dff['date'] = pd.to_datetime(du.get_t(start_date, end_date=end_date))
 
+    today = date.today()
+    today_line = alt.Chart(pd.DataFrame({'date': [today]})).mark_rule(color='grey', strokeDash=[5, 5]).encode(
+        x='date:T'
+    )
     with col1:
         power_df = pd.melt(power_dff, id_vars=["date"], 
                            value_vars=[
@@ -134,12 +145,12 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         power = (
             alt.Chart(power_df)
             .mark_line()
-            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+            .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
                     y=alt.Y("EIB").scale(type='log'), color=alt.Color('Power', legend=alt.Legend(orient="top", title=None)))
             .properties(title="Network Power")
-            .configure_title(fontSize=14, anchor='middle')
         )
-        st.altair_chart(power.interactive(), use_container_width=True) 
+        final_power = (power + today_line).configure_title(fontSize=14, anchor='middle')
+        st.altair_chart(final_power.interactive(), use_container_width=True) 
 
         # NOTE: adding the tooltip here causes the chart to not render for some reason
         # Following the directions here: https://docs.streamlit.io/library/api-reference/charts/st.altair_chart
@@ -150,12 +161,12 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         roi = (
             alt.Chart(roi_df)
             .mark_line()
-            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+            .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
                     y=alt.Y("%"), color=alt.Color('Scenario', legend=None))
             .properties(title="1Y Sector FoFR")
-            .configure_title(fontSize=14, anchor='middle')
         )
-        st.altair_chart(roi.interactive(), use_container_width=True)
+        final_roi = (roi + today_line).configure_title(fontSize=14, anchor='middle')
+        st.altair_chart(final_roi.interactive(), use_container_width=True)
 
         # rps_df = pd.melt(rps_dff, id_vars=["date"], 
         #                  value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
@@ -178,12 +189,12 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         day_pledge_per_QAP = (
             alt.Chart(pledge_per_qap_df)
             .mark_line()
-            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+            .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
                     y=alt.Y("FIL"), color=alt.Color('Scenario', legend=alt.Legend(orient="top", title=None)))
             .properties(title="Pledge/32GiB QAP")
-            .configure_title(fontSize=14, anchor='middle')
         )
-        st.altair_chart(day_pledge_per_QAP.interactive(), use_container_width=True)
+        final_day_pledge_per_QAP = (day_pledge_per_QAP + today_line).configure_title(fontSize=14, anchor='middle')
+        st.altair_chart(final_day_pledge_per_QAP.interactive(), use_container_width=True)
 
         minting_df = pd.melt(minting_dff, id_vars=["date"],
                              value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
@@ -191,12 +202,12 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         minting = (
             alt.Chart(minting_df)
             .mark_line()
-            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+            .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
                     y=alt.Y("FILRate", title='FIL/day'), color=alt.Color('Scenario', legend=None))
             .properties(title="Minting Rate")
-            .configure_title(fontSize=14, anchor='middle')
         )
-        st.altair_chart(minting.interactive(), use_container_width=True)
+        final_minting = (minting + today_line).configure_title(fontSize=14, anchor='middle')
+        st.altair_chart(final_minting.interactive(), use_container_width=True)
 
         # drps_df = pd.melt(drps_dff, id_vars=["date"], 
         #                  value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
@@ -219,12 +230,12 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         cs = (
             alt.Chart(cs_df)
             .mark_line()
-            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+            .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
                     y=alt.Y("cs", title='M-FIL'), color=alt.Color('Scenario', legend=None))
             .properties(title="Circulating Supply")
-            .configure_title(fontSize=14, anchor='middle')
         )
-        st.altair_chart(cs.interactive(), use_container_width=True)
+        final_cs = (cs + today_line).configure_title(fontSize=14, anchor='middle')
+        st.altair_chart(final_cs.interactive(), use_container_width=True)
 
         locked_df = pd.melt(locked_dff, id_vars=["date"],
                              value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
@@ -232,12 +243,12 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         locked = (
             alt.Chart(locked_df)
             .mark_line()
-            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+            .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
                     y=alt.Y("cs", title='M-FIL'), color=alt.Color('Scenario', legend=None))
             .properties(title="Network Locked")
-            .configure_title(fontSize=14, anchor='middle')
         )
-        st.altair_chart(locked.interactive(), use_container_width=True)
+        final_locked = (locked + today_line).configure_title(fontSize=14, anchor='middle')
+        st.altair_chart(final_locked.interactive(), use_container_width=True)
 
         # dnr_df = pd.melt(dnr_dff, id_vars=["date"], 
         #                  value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
@@ -260,12 +271,12 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         csd = (
             alt.Chart(csd_df)
             .mark_line()
-            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+            .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
                     y=alt.Y("cs", title='M-FIL'), color=alt.Color('Scenario', legend=None))
             .properties(title="Circ Supply - Delta")
-            .configure_title(fontSize=14, anchor='middle')
         )
-        st.altair_chart(csd.interactive(), use_container_width=True)
+        final_csd = (csd + today_line).configure_title(fontSize=14, anchor='middle')
+        st.altair_chart(final_csd.interactive(), use_container_width=True)
         
         as_df = pd.melt(as_dff, id_vars=["date"],
                              value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
@@ -273,12 +284,12 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         aas = (
             alt.Chart(as_df)
             .mark_line()
-            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+            .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
                     y=alt.Y("cs", title='M-FIL'), color=alt.Color('Scenario', legend=None))
             .properties(title="Available Supply")
-            .configure_title(fontSize=14, anchor='middle')
         )
-        st.altair_chart(aas.interactive(), use_container_width=True)
+        final_aas = (aas + today_line).configure_title(fontSize=14, anchor='middle')
+        st.altair_chart(final_aas.interactive(), use_container_width=True)
 
         locked_df = pd.melt(locked_dff, id_vars=["date"],
                              value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
@@ -286,12 +297,12 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         locked = (
             alt.Chart(locked_df)
             .mark_line()
-            .encode(x=alt.X("date", title="", axis=alt.Axis(labelAngle=-45)), 
+            .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
                     y=alt.Y("cs", title='M-FIL'), color=alt.Color('Scenario', legend=None))
             .properties(title="Network Locked")
-            .configure_title(fontSize=14, anchor='middle')
         )
-        st.altair_chart(locked.interactive(), use_container_width=True)
+        final_locked = (locked + today_line).configure_title(fontSize=14, anchor='middle')
+        st.altair_chart(final_locked.interactive(), use_container_width=True)
 
 
 def add_costs(results_dict, cost_scaling_constant=0.1, filp_scaling_cost_pct=0.5):
@@ -348,8 +359,7 @@ def forecast_economy(start_date=None, current_date=None, end_date=None, forecast
     t3 = time.time()
     
     # create gamma vector for FIP0081
-    # assume update-day is 6mo from now
-    update_day = current_date + timedelta(days=180)
+    update_day = date(2025, 1, 1)
     no_fip0081 = np.ones(forecast_length_days)
     gamma_smooth_1y = create_gamma_vector(update_day, forecast_length_days, current_date, ramp_len_days=int(365))
 
@@ -413,7 +423,7 @@ def main():
         layout="wide",
     )
     current_date = date.today() - timedelta(days=3)
-    mo_start = max(current_date.month - 1 % 12, 1)
+    mo_start = max(current_date.month - 6 % 12, 1)
     start_date = date(current_date.year, mo_start, 1)
     forecast_length_days=365*3
     end_date = current_date + timedelta(days=forecast_length_days)
