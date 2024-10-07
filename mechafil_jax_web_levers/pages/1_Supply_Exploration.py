@@ -359,7 +359,7 @@ def forecast_economy(start_date=None, current_date=None, end_date=None, forecast
     t3 = time.time()
     
     # create gamma vector for FIP0081
-    update_day = date(2025, 1, 1)
+    update_day = date(2024, 11, 30)
     no_fip0081 = np.ones(forecast_length_days)
     gamma_smooth_1y = create_gamma_vector(update_day, forecast_length_days, current_date, ramp_len_days=int(365))
 
