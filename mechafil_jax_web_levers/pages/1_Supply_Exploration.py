@@ -291,18 +291,18 @@ def plot_panel(scenario_results, baseline, start_date, current_date, end_date):
         final_aas = (aas + today_line).configure_title(fontSize=14, anchor='middle')
         st.altair_chart(final_aas.interactive(), use_container_width=True)
 
-        locked_df = pd.melt(locked_dff, id_vars=["date"],
-                             value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
-                             var_name='Scenario', value_name='cs')
-        locked = (
-            alt.Chart(locked_df)
-            .mark_line()
-            .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
-                    y=alt.Y("cs", title='M-FIL'), color=alt.Color('Scenario', legend=None))
-            .properties(title="Network Locked")
-        )
-        final_locked = (locked + today_line).configure_title(fontSize=14, anchor='middle')
-        st.altair_chart(final_locked.interactive(), use_container_width=True)
+        # locked_df = pd.melt(locked_dff, id_vars=["date"],
+        #                      value_vars=["StatusQuo", "Configured"], #, "Optimistic"], 
+        #                      var_name='Scenario', value_name='cs')
+        # locked = (
+        #     alt.Chart(locked_df)
+        #     .mark_line()
+        #     .encode(x=alt.X("date", title="", axis=alt.Axis(format="%b %Y", labelAngle=-45, tickCount=5)), 
+        #             y=alt.Y("cs", title='M-FIL'), color=alt.Color('Scenario', legend=None))
+        #     .properties(title="Network Locked")
+        # )
+        # final_locked = (locked + today_line).configure_title(fontSize=14, anchor='middle')
+        # st.altair_chart(final_locked.interactive(), use_container_width=True)
 
 
 def add_costs(results_dict, cost_scaling_constant=0.1, filp_scaling_cost_pct=0.5):
