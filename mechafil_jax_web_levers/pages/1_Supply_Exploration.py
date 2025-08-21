@@ -31,18 +31,6 @@ def local_css(file_name):
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 # local_css("debug.css")
 
-def create_gamma_vector(upgrade_date, forecast_length, current_date, ramp_len_days=90):
-    gamma_smooth = np.ones(forecast_length)
-    update_day = (upgrade_date-current_date).days
-
-    ramp_gamma = np.linspace(1, 0.7, ramp_len_days)
-    
-    ramp_start_idx = update_day
-    ramp_end_idx = min(forecast_length, ramp_start_idx + ramp_len_days)
-    gamma_smooth[ramp_start_idx:ramp_end_idx] = ramp_gamma[0:(ramp_end_idx-ramp_start_idx)]
-    gamma_smooth[ramp_end_idx:] = 0.7
-    return gamma_smooth
-
 @st.cache_data
 def get_offline_data(start_date, current_date, end_date):
     PUBLIC_AUTH_TOKEN='Bearer ghp_EviOPunZooyAagPPmftIsHfWarumaFOUdBUZ'
@@ -358,26 +346,18 @@ def forecast_economy(start_date=None, current_date=None, end_date=None, forecast
     offline_data, _, _, _ = get_offline_data(start_date, current_date, end_date)
     t3 = time.time()
     
-    # create gamma vector for FIP0081
-    update_day = date(2024, 11, 30)
-    no_fip0081 = np.ones(forecast_length_days)
-    gamma_smooth_1y = create_gamma_vector(update_day, forecast_length_days, current_date, ramp_len_days=int(365))
-
     # run simulation for the configured scenario, and for a pessimsitc and optimistic version of it
-    gamma_configured = gamma_smooth_1y if st.session_state['options'] == 'FIP0081 (1Y Ramp)' else no_fip0081
     use_as_configured = st.session_state['options'] == 'CS->AS'
     scenarios = ['status-quo', 'configured']
     scenario_configs = {
         'status-quo': {
             'sector_duration_days': 360, 
             'lock_target': 0.3, 
-            'gamma': no_fip0081, 
             'use_available_supply': False
         },
         'configured': {
             'sector_duration_days': sector_duration_days, 
             'lock_target': lock_target, 
-            'gamma': gamma_configured,
             'use_available_supply': use_as_configured,
         },
     }
@@ -402,8 +382,6 @@ def forecast_economy(start_date=None, current_date=None, end_date=None, forecast
             forecast_length_days, 
             scenario_configs[scenario]['sector_duration_days'],
             offline_data,
-            gamma=scenario_configs[scenario]['gamma'],
-            gamma_weight_type=0,  # arithmetic weighting
             use_available_supply=scenario_configs[scenario]['use_available_supply'],
         ) 
         scenario_results[scenario] = simulation_results
@@ -452,7 +430,7 @@ def main():
         st.slider("Sector Duration", min_value=180, max_value=720, value=360, step=30, format='%d', key="sector_duration_slider",
                   on_change=forecast_economy, kwargs=forecast_kwargs, disabled=False, label_visibility="visible")
         
-        st.radio("FIP Modifications", options=['None', 'FIP0081 (1Y Ramp)', 'CS->AS'], index=0, key="options",
+        st.radio("FIP Modifications", options=['None', 'CS->AS'], index=0, key="options",
                  on_change=forecast_economy, kwargs=forecast_kwargs, disabled=False, label_visibility="visible")
 
         st.button("Forecast", on_click=forecast_economy, kwargs=forecast_kwargs, key="forecast_button")
